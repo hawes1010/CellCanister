@@ -1,0 +1,34 @@
+object <class 'board'> is of type type
+  
+D0 -- Pin(Pin.board.D0, mode=Pin.DISABLED)
+  
+D1 -- Pin(Pin.board.D1, mode=Pin.DISABLED)
+  
+D2 -- Pin(Pin.board.D2, mode=Pin.DISABLED)
+  
+D3 -- Pin(Pin.board.D3, mode=Pin.DISABLED)
+  
+D4 -- Pin(Pin.board.D4, mode=Pin.DISABLED)
+  
+D5 -- Pin(Pin.board.D5, mode=Pin.ALT, pull=Pin.PULL_UP, alt=Pin.AF5_ASSOC_IND)
+ 
+D6 -- Pin(Pin.board.D6, mode=Pin.DISABLED)
+  
+D7 -- Pin(Pin.board.D7, mode=Pin.ALT, pull=Pin.PULL_UP, alt=Pin.AF7_CTS)
+  
+D8 -- Pin(Pin.board.D8, mode=Pin.ALT, pull=Pin.PULL_UP, alt=Pin.AF8_SLEEP_REQ)
+  
+D9 -- Pin(Pin.board.D9, mode=Pin.ALT, pull=Pin.PULL_UP, alt=Pin.AF9_ON_SLEEP)
+  P0 -- Pin(Pin.board.P0, mode=Pin.DISABLED)
+  
+D10 -- Pin(Pin.board.P0, mode=Pin.DISABLED)
+  P1 -- Pin(Pin.board.P1, mode=Pin.DISABLED)
+  
+D11 -- Pin(Pin.board.P1, mode=Pin.DISABLED)
+  P2 -- Pin(Pin.board.P2, mode=Pin.DISABLED)
+  
+D12 -- Pin(Pin.board.P2, mode=Pin.DISABLED)
+
+PHONE NUMBERS
+xbee#1: 1-(523) 598-0556
+xbee#2: 1-(523) 598-0555
