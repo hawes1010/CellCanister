@@ -1,11 +1,5 @@
 # Default template for XBee MicroPython projects
 
-import urequests
-import umqtt
-import uftp
-import remotemanager
-import hdc1080
-import ds1621
 
 # Default template for XBee MicroPython projects #
 # Need to import any tools I will need (SPI, GPIO control, ADC, etc)
@@ -16,7 +10,9 @@ import time
 # Initialize ports and pins
 import network
 import xbee
+import machine
 from machine import Pin
+from machine import I2C
 
 # EXAMPLE!!!!!!~~~~~`
 # Set up a Pin object to represent pin 6 (PWM0/RSSI/DIO10).
@@ -32,22 +28,22 @@ from machine import Pin
 # Pin(Label of Pin we wish to use, Input or Output, Pull Up or Pull Down)
 # Value sets buttons to be digital inputs that can control
 
-dio0 = Pin("D0", Pin.OUT, value=4)  # Digital Low~~~~~~~Digital High = 5
-dio1 = Pin("D1", Pin.OUT, value=4)  # Digital Low~~~~~~~Digital High = 5
-dio2 = Pin("D2", Pin.OUT, value=4)  # Digital Low~~~~~~~Digital High = 5
-dio3 = Pin("D3", Pin.OUT, value=4)  # Digital Low~~~~~~~Digital High = 5
+dio0 = Pin("D0", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 5
+# dio1 = Pin("D1", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 5
+# dio2 = Pin("D2", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 5
+reset_pin = Pin("D3", 2, Pin.PULL_UP)  # Digital Low~~~~~~~Digital High = 5
 led = Pin("D4", Pin.OUT, value=0)  # Turn on LED to signify startup
 # this network command sets up the object for the Cellular Network
 c = network.Cellular()
 # I2C_PIN_ID = "P1"
-i2c = Pin("D1", Pin.OUT, value=6)  # I2c Module
-Pump1 = Pin("P1", Pin.OUT, value=4)  # Digital Low~~~~~~~Digital High = 5
-Pump2 = Pin("P0", Pin.OUT, value=4)  # Digital Low~~~~~~~Digital High = 5
-
-commands_list = ["?", "Check Can", "Pull Sample 1", "Pull Sample 2", "Reset", ]
+i2c = I2C("D1", "P1", freq=400000)  # I2c Module
+Pumpon = Pin("P0", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 5
+Pumpoff = Pin("D2", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 5
+commands_list = ["?", "Check Can", "Pull Sample 1", "Pull Sample 2", "Reset", ""]
 send_list = "Commands: " + str(commands_list).strip('[]')
-
-
+global pump_ready
+pump_ready = 1
+print("Starting up again!")
 # Useful dictionary for later use of
 # the commands we have at the moment
 
@@ -61,7 +57,8 @@ def text_messages(string):  # This looks at the received message and returns a m
         "Check Can".lower(): "Checking on Can",
         "Pull Sample 1".lower(): "Pulling Sample from pump 1",
         "Pull Sample 2".lower(): "Pulling Sample from pump 2",
-        "Reset".lower(): "Resetting Pump system"
+        "Reset".lower(): "Resetting Pump system",
+        "Time Sample".lower(): "How many seconds do you want the pump open?"
     }
     print(switcher.get(string, "Invalid command message"))
     return switcher.get(string, "Invalid command message")
@@ -95,12 +92,17 @@ def command_list(comm):
         return "Invalid Command"
 
 
+def i2comms():
+    channel = i2c.scan()  # scan for slaves, returning a list of 7-bit addresses
+    time.sleep(0.015)
+    print(channel)
+
 def sleep(time):
     time.sleep(time)
 
 
 def control_canister(intz): # this just reads in an integer that gets set based on the message received
-    # These are still waiting for hardward lines to interface with
+    # These are still waiting for hardware lines to interface with
     if intz == 0:
         print("Nothing happens, commands are sent")
         send_back_number2 = sms['sender']
@@ -109,6 +111,7 @@ def control_canister(intz): # this just reads in an integer that gets set based 
         except Exception as e:
             print("Send failure: %s" % str(e))
     elif intz == 1:  # Check Power GPIO flag, send statuses
+        send_back_number2 = sms['sender']
         check_pins()
         print('I2C: {i2c}, Pump 1: {Pump1}, Pump 2: {Pump2)')
         try:
@@ -116,53 +119,100 @@ def control_canister(intz): # this just reads in an integer that gets set based 
         except Exception as e:
             print("Send failure: %s" % str(e))
     elif intz == 2:  # Check Can status 1 too, but then power Solenoid
-        if Pump1.value == 4:
-            open_valve(Pump1)
+        pump_ready = 0
+        send_back_number2 = sms['sender']
+        print(Pumpon.value())
+        if Pumpon.value() == 0:
+            open_valve(Pumpon)
         else:
+            try:
+                c.sms_send(send_back_number2, "Pump Busy")
+            except Exception as e:
+                print("Send failure: %s" % str(e))
             print("Valve busy")
-    elif intz == 3:  # Check Can status 2 too, but then power Solenoid
-        if Pump2.value == 4:
-            open_valve(Pump2)
+    elif intz == 3:  # Check Can status 2 too, but then power Solenoid RIGHT NOW THIS DOES THE SAME AS 2
+        pump_ready = 0
+        send_back_number2 = sms['sender']
+        if Pumpon.value == 0:
+            open_valve(Pumpon)
         else:
             print("Valve busy")
     elif intz == 4:  # Do a System or Canister Reset
+        send_back_number2 = sms['sender']
+        pump_ready = 1
+        try:
+            c.sms_send(send_back_number2, "Pump Resetting")
+        except Exception as e:
+            print("Send failure: %s" % str(e))
         print("At some point this will reset something")
+    elif intz == 5:
+        pump_ready = 0
+        send_back_number2 = sms['sender']
+        while True:
+            sms2 = c.sms_receive() # wait for seconds
+            if sms2:
+                t = sms2['message']
+                open_valve_timed(Pumpon, t)
+                break
+            time.sleep(1)
+        try:
+            c.sms_send(send_back_number2, "Pump Resetting")
+        except Exception as e:
+            print("Send failure: %s" % str(e))
     else:
         return "Invalid command message"
 
 
+def wait_for_message():
+    while True:
+        sms2 = c.sms_receive()  # wait for seconds
+        if sms2:
+            t = sms2['message']
+            open_valve_timed(Pumpon, t)
+            break
+    time.sleep(1)
+
+
 def read_status():
-    if Pump1.value() == 5:
+    if Pumpon.value() == 1:
         print("Pump1 Not available")
-    if Pump2.value == 5:
-        print("Pump2 not available.")
-    if (Pump1.value() == 4) and (Pump2.value() == 4):
-        print("Both Pumps are available")
+    # if Pump2.value == 1:
+    #    print("Pump2 not available.")
+    # if (Pump1.value() == 0) and (Pump2.value() == 0):
+    #    print("Both Pumps are available")
 
 
 def check_pins():
-    print(i2c, Pump1, Pump2)
+    print(i2c, Pumpon, Pumpoff)
 
 
 def open_valve(pump):
-    # Non-Switching
+    # Latching
     # time to open that solenoid
+    pump.value(1)
     # pulse power for 500 ms (for now)
     time.sleep(0.5)
+    pump.value(0)
     # stop pulsing
-    time.sleep(30)
-    close_valve(pump)
+    time.sleep(2)
+    # still on until... close valve! Make sure to use off switch line
+    close_valve(Pumpoff)
+    #should be ded now
 
 
 def close_valve(pump):
-    # Non-Switching
+    # Latching
+    pump.value(1)
     # time to close that valve
-    # pulse the negative power for 500 ms
+    # pulse the  power for 500 ms
     time.sleep(0.5)
     # stop pulsing
+    pump.value(0)
+    time.sleep(2)
+    # now its off, yay
 
 
-def open_switch_valve(pump):
+def open_nonswitch_valve(pump):
     # Non-Switching
     # time to open that solenoid
     # pulse power for 500 ms (for now)
@@ -172,7 +222,7 @@ def open_switch_valve(pump):
     close_valve(pump)
 
 
-def close_switch_valve(pump):
+def close_nonswitch_valve(pump):
     # Non-Switching
     # time to close that valve
     # pulse the negative power for 500 ms
@@ -180,25 +230,71 @@ def close_switch_valve(pump):
     # stop pulsing
 
 
+def open_valve_timed(pump,t):
+    # Latching
+    # time to open that solenoid
+    pump.value(1)
+    # pulse power for 500 ms (for now)
+    time.sleep(0.5)
+    pump.value(0)
+    # stop pulsing
+    time.sleep(t)
+    # still on until... close valve! Make sure to use off switch line
+    close_valve(Pumpoff)
+    # should be ded now
+
+
+def close_valve_timed(pump,t):
+    # Latching
+    pump.value(1)
+    # time to close that valve
+    # pulse the  power for 500 ms
+    time.sleep(0.5)
+    # stop pulsing
+    pump.value(0)
+    time.sleep(t)
+    # now its off, yay
+
+
 first_time = True
+
+
 global current_sender
 change = False  # This variable helpsKeep track of who the last sender was/is
+# while True:
+#    open_valve(Pumpon)
+# if reset_pin.value() == 0:
+#    xbee.atcmd('FR')
+#    machine.soft_reset()
+#    print(reset_pin.value())
 while not c.isconnected():
+    print("I am not connected")
+    if reset_pin.value() == 0:
+        xbee.atcmd('FR')
+        machine.soft_reset()
+        print(reset_pin.value())
     time.sleep(1)
 
+
 while True:
+    if reset_pin.value() == 0:
+        led.value(1)
+        print(reset_pin.value())
+        #xbee.atcmd('FR')
+        machine.soft_reset()
     sms = c.sms_receive()
-    if sms:
-        if sms['sender'] != current_sender:
-            change = True
-    if (sms and first_time) or change:  # if a new user is texting in to the device,
+   # if sms:
+        # if sms['sender'] != current_sender:
+        #  change = True
+    if sms and first_time: # or change:  # if a new user is texting in to the device,
         change = False                  # send them the commands
+        first_time = False
         current_sender = sms['sender']
         send_back_number = sms['sender']
         c.sms_send(send_back_number, send_list)
-        first_time = False
+
         time.sleep(1)
-    elif sms:
+    elif sms: # no change in sender or the first time it has been activated
         print("SMS received from %s >> %s" % (sms['sender'], sms['message']))
         send_back_number = sms['sender']
         message_send = text_messages(sms['message'])
