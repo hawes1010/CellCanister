@@ -46,8 +46,8 @@ pump_ready = 1
 print("Starting up again!")
 # Useful dictionary for later use of
 # the commands we have at the moment
-
-
+# Pump_time is the variable which controls how long the pump is on for.
+Pump_time = 30
 # RELAY PIN = "Digital logic line here"
 def text_messages(string):  # This looks at the received message and returns a message to send
     # back to the user.
@@ -103,6 +103,7 @@ def sleep(time):
 
 def control_canister(intz): # this just reads in an integer that gets set based on the message received
     # These are still waiting for hardware lines to interface with
+    time_passed=0
     if intz == 0:
         print("Nothing happens, commands are sent")
         send_back_number2 = sms['sender']
@@ -148,13 +149,15 @@ def control_canister(intz): # this just reads in an integer that gets set based 
     elif intz == 5:
         pump_ready = 0
         send_back_number2 = sms['sender']
-        while True:
+        time_passed = 0
+        while time_passed < 60:
             sms2 = c.sms_receive() # wait for seconds
             if sms2:
                 t = sms2['message']
                 open_valve_timed(Pumpon, t)
                 break
             time.sleep(1)
+            time_passed = time_passed + 1
         try:
             c.sms_send(send_back_number2, "Pump Resetting")
         except Exception as e:
@@ -194,7 +197,7 @@ def open_valve(pump):
     time.sleep(0.5)
     pump.value(0)
     # stop pulsing
-    time.sleep(2)
+    time.sleep(Pump_time)
     # still on until... close valve! Make sure to use off switch line
     close_valve(Pumpoff)
     #should be ded now
@@ -208,7 +211,7 @@ def close_valve(pump):
     time.sleep(0.5)
     # stop pulsing
     pump.value(0)
-    time.sleep(2)
+    time.sleep(1)
     # now its off, yay
 
 
@@ -216,6 +219,7 @@ def open_nonswitch_valve(pump):
     # Non-Switching
     # time to open that solenoid
     # pulse power for 500 ms (for now)
+    pump.value(1)
     time.sleep(0.5)
     # stop pulsing
     time.sleep(30)
@@ -226,11 +230,12 @@ def close_nonswitch_valve(pump):
     # Non-Switching
     # time to close that valve
     # pulse the negative power for 500 ms
+    pump.value(0)
     time.sleep(0.5)
     # stop pulsing
 
 
-def open_valve_timed(pump,t):
+def open_valve_timed(pump, t):
     # Latching
     # time to open that solenoid
     pump.value(1)
@@ -291,12 +296,12 @@ while True:
         first_time = False
         current_sender = sms['sender']
         send_back_number = sms['sender']
-        c.sms_send(send_back_number, send_list)
+        c.sms_send(send_back_number, send_list) # Sender gets command list
 
-        time.sleep(1)
+        time.sleep(1) # wait one second
     elif sms: # no change in sender or the first time it has been activated
         print("SMS received from %s >> %s" % (sms['sender'], sms['message']))
-        send_back_number = sms['sender']
+        send_back_number = sms['sender'] # this sets up the sender as the receiver of the Xbee Message
         message_send = text_messages(sms['message'])
         control_canister(command_list(sms['message']))
         try:
