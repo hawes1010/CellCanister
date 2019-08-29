@@ -37,8 +37,8 @@ led = Pin("D4", Pin.OUT, value=0)  # Turn on LED to signify startup
 c = network.Cellular()
 # I2C_PIN_ID = "P1"
 i2c = I2C("D1", "P1", freq=400000)  # I2c Module
-Pumpon = Pin("P0", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 5
-Pumpoff = Pin("D2", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 5
+Pumpon = Pin("P0", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1
+Pumpoff = Pin("D2", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1
 commands_list = ["?", "Check Can", "Pull Sample 1", "Pull Sample 2", "Reset", ""]
 send_list = "Commands: " + str(commands_list).strip('[]')
 global pump_ready
