@@ -28,10 +28,10 @@ from machine import I2C
 # Pin(Label of Pin we wish to use, Input or Output, Pull Up or Pull Down)
 # Value sets buttons to be digital inputs that can control
 
-dio0 = Pin("D0", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 5
-# dio1 = Pin("D1", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 5
-# dio2 = Pin("D2", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 5
-reset_pin = Pin("D3", 2, Pin.PULL_UP)  # Digital Low~~~~~~~Digital High = 5
+dio0 = Pin("D0", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1
+# dio1 = Pin("D1", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1
+# dio2 = Pin("D2", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1
+reset_pin = Pin("D3", 2, Pin.PULL_UP)  # Digital Low~~~~~~~Digital High = 1
 led = Pin("D4", Pin.OUT, value=0)  # Turn on LED to signify startup
 # this network command sets up the object for the Cellular Network
 c = network.Cellular()
