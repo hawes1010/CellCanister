@@ -1,3 +1,3 @@
-*PHONE NUMBERS*
+**PHONE NUMBERS**
 xbee#1: 1-(523) 598-0556
 xbee#2: 1-(523) 598-0555
