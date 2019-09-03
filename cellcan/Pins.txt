@@ -28,7 +28,3 @@ D11 -- Pin(Pin.board.P1, mode=Pin.DISABLED)
   P2 -- Pin(Pin.board.P2, mode=Pin.DISABLED)
   
 D12 -- Pin(Pin.board.P2, mode=Pin.DISABLED)
-
-PHONE NUMBERS
-xbee#1: 1-(523) 598-0556
-xbee#2: 1-(523) 598-0555
