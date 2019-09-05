@@ -15,7 +15,7 @@ from machine import Pin
 from machine import I2C
 
 # EXAMPLE!!!!!!~~~~~`
-# Set up a Pin object to represent pin 6 (PWM0/RSSI/DIO10).
+# Set up a Pin object to represent pin 6, which is P0 according to XCTU (PWM0/RSSI/DIO10).
 # The second argument, Pin.OUT, sets the pin's mode to be an OUTPUT.
 # The third argument sets the initial value, which is 0 here, meaning OFF.
 # dio10 = Pin("P0", Pin.OUT, value=0)
@@ -36,12 +36,17 @@ led = Pin("D4", Pin.OUT, value=0)  # Turn on LED to signify startup
 # this network command sets up the object for the Cellular Network
 c = network.Cellular()
 # I2C_PIN_ID = "P1"
-i2c = I2C("D1", "P1", freq=400000)  # I2c Module
-Pumpon = Pin("P0", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1
-Pumpoff = Pin("D2", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1
-commands_list = ["?", "Check Can", "Pull Sample 1", "Pull Sample 2", "Reset", ""]
+
+# NOTE: CHANGED PUMPOFF FROM P1 TO D2.
+
+# I2C LINES ARE D1: pin 19, and P1: pin 7
+
+
+i2c = I2C(1, freq=400000)  # I2c Module
+Pumpon = Pin("P0", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1 P0 is on DIO10
+Pumpoff = Pin("D2", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1 D2 is on DIO2
+commands_list = ["?", "Check Can", "Pull Sample 1", "Pull Sample 2", "Reset", "Time Sample"]
 send_list = "Commands: " + str(commands_list).strip('[]')
-global pump_ready
 pump_ready = 1
 print("Starting up again!")
 # Useful dictionary for later use of
@@ -53,7 +58,7 @@ def text_messages(string):  # This looks at the received message and returns a m
     # back to the user.
     string = string.lower()
     switcher = {
-        "?": "Sending Commands",
+        "?": "^Commands^",
         "Check Can".lower(): "Checking on Can",
         "Pull Sample 1".lower(): "Pulling Sample from pump 1",
         "Pull Sample 2".lower(): "Pulling Sample from pump 2",
@@ -88,6 +93,8 @@ def command_list(comm):
         return 3
     elif comm.lower() == "reset":
         return 4
+    elif comm.lower() == "time sample":
+        return 5
     else:
         return "Invalid Command"
 
@@ -120,11 +127,12 @@ def control_canister(intz): # this just reads in an integer that gets set based 
         except Exception as e:
             print("Send failure: %s" % str(e))
     elif intz == 2:  # Check Can status 1 too, but then power Solenoid
+        global pump_ready
         pump_ready = 0
         send_back_number2 = sms['sender']
         print(Pumpon.value())
         if Pumpon.value() == 0:
-            open_valve(Pumpon)
+            open_valve()
         else:
             try:
                 c.sms_send(send_back_number2, "Pump Busy")
@@ -132,6 +140,7 @@ def control_canister(intz): # this just reads in an integer that gets set based 
                 print("Send failure: %s" % str(e))
             print("Valve busy")
     elif intz == 3:  # Check Can status 2 too, but then power Solenoid RIGHT NOW THIS DOES THE SAME AS 2
+        global pump_ready
         pump_ready = 0
         send_back_number2 = sms['sender']
         if Pumpon.value == 0:
@@ -139,14 +148,16 @@ def control_canister(intz): # this just reads in an integer that gets set based 
         else:
             print("Valve busy")
     elif intz == 4:  # Do a System or Canister Reset
+        global pump_ready
         send_back_number2 = sms['sender']
-        pump_ready = 1
+        pump_ready = 1hh
         try:
             c.sms_send(send_back_number2, "Pump Resetting")
         except Exception as e:
             print("Send failure: %s" % str(e))
         print("At some point this will reset something")
     elif intz == 5:
+        global pump_ready
         pump_ready = 0
         send_back_number2 = sms['sender']
         time_passed = 0
@@ -159,7 +170,7 @@ def control_canister(intz): # this just reads in an integer that gets set based 
             time.sleep(1)
             time_passed = time_passed + 1
         try:
-            c.sms_send(send_back_number2, "Pump Resetting")
+            c.sms_send(send_back_number2, "Pump Time Sample Taken")
         except Exception as e:
             print("Send failure: %s" % str(e))
     else:
@@ -189,14 +200,15 @@ def check_pins():
     print(i2c, Pumpon, Pumpoff)
 
 
-def open_valve(pump):
+def open_valve():
     # Latching
     # time to open that solenoid
-    pump.value(1)
+    Pumpon.value(1)
     # pulse power for 500 ms (for now)
-    time.sleep(0.5)
-    pump.value(0)
+    time.sleep(3)
+    Pumpon.value(0)
     # stop pulsing
+    # let valve stay open for 30 seconds, currently commented out for demo purposes
     time.sleep(Pump_time)
     # still on until... close valve! Make sure to use off switch line
     close_valve(Pumpoff)
@@ -208,7 +220,7 @@ def close_valve(pump):
     pump.value(1)
     # time to close that valve
     # pulse the  power for 500 ms
-    time.sleep(0.5)
+    time.sleep(3)
     # stop pulsing
     pump.value(0)
     time.sleep(1)
@@ -273,7 +285,7 @@ change = False  # This variable helpsKeep track of who the last sender was/is
 #    machine.soft_reset()
 #    print(reset_pin.value())
 while not c.isconnected():
-    print("I am not connected")
+    # print("I am not connected")
     if reset_pin.value() == 0:
         xbee.atcmd('FR')
         machine.soft_reset()
@@ -288,9 +300,6 @@ while True:
         #xbee.atcmd('FR')
         machine.soft_reset()
     sms = c.sms_receive()
-   # if sms:
-        # if sms['sender'] != current_sender:
-        #  change = True
     if sms and first_time: # or change:  # if a new user is texting in to the device,
         change = False                  # send them the commands
         first_time = False
