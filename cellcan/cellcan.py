@@ -1,4 +1,5 @@
 # Default template for XBee MicroPython projects
+# Default template for XBee MicroPython projects
 
 
 # Default template for XBee MicroPython projects #
@@ -13,6 +14,7 @@ import xbee
 import machine
 from machine import Pin
 from machine import I2C
+import datetime
 
 # EXAMPLE!!!!!!~~~~~`
 # Set up a Pin object to represent pin 6, which is P0 according to XCTU (PWM0/RSSI/DIO10).
@@ -27,7 +29,17 @@ from machine import I2C
 # ADC also occupies the same memory as D0-D3
 # Pin(Label of Pin we wish to use, Input or Output, Pull Up or Pull Down)
 # Value sets buttons to be digital inputs that can control
+class Canister:
+    can_log = []
 
+    def __init__(self, status):
+        self.status = status
+
+    def log(self, info):
+        self.can_log.append(info)
+
+
+can = Canister(1)
 dio0 = Pin("D0", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1
 # dio1 = Pin("D1", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1
 # dio2 = Pin("D2", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1
@@ -63,7 +75,8 @@ def text_messages(string):  # This looks at the received message and returns a m
         "Pull Sample 1".lower(): "Pulling Sample from pump 1",
         "Pull Sample 2".lower(): "Pulling Sample from pump 2",
         "Reset".lower(): "Resetting Pump system",
-        "Time Sample".lower(): "How many seconds do you want the pump open?"
+        "Time Sample".lower(): "How many seconds do you want the pump open?",
+        "Check Log".lower(): "Log: %s" % can.can_log
     }
     print(switcher.get(string, "Invalid command message"))
     return switcher.get(string, "Invalid command message")
@@ -95,6 +108,8 @@ def command_list(comm):
         return 4
     elif comm.lower() == "time sample":
         return 5
+    elif comm.lower() == "check log":
+        return 6
     else:
         return "Invalid Command"
 
@@ -127,6 +142,7 @@ def control_canister(intz): # this just reads in an integer that gets set based 
         except Exception as e:
             print("Send failure: %s" % str(e))
     elif intz == 2:  # Check Can status 1 too, but then power Solenoid
+        record_sample()
         global pump_ready
         pump_ready = 0
         send_back_number2 = sms['sender']
@@ -140,6 +156,7 @@ def control_canister(intz): # this just reads in an integer that gets set based 
                 print("Send failure: %s" % str(e))
             print("Valve busy")
     elif intz == 3:  # Check Can status 2 too, but then power Solenoid RIGHT NOW THIS DOES THE SAME AS 2
+        record_sample()
         global pump_ready
         pump_ready = 0
         send_back_number2 = sms['sender']
@@ -150,7 +167,7 @@ def control_canister(intz): # this just reads in an integer that gets set based 
     elif intz == 4:  # Do a System or Canister Reset
         global pump_ready
         send_back_number2 = sms['sender']
-        pump_ready = 1hh
+        pump_ready = 1
         try:
             c.sms_send(send_back_number2, "Pump Resetting")
         except Exception as e:
@@ -173,6 +190,8 @@ def control_canister(intz): # this just reads in an integer that gets set based 
             c.sms_send(send_back_number2, "Pump Time Sample Taken")
         except Exception as e:
             print("Send failure: %s" % str(e))
+    elif intz == 6:
+        print("sending log")
     else:
         return "Invalid command message"
 
@@ -189,12 +208,17 @@ def wait_for_message():
 
 def read_status():
     if Pumpon.value() == 1:
-        print("Pump1 Not available")
+        print("valve Not available")
     # if Pump2.value == 1:
-    #    print("Pump2 not available.")
+    #    print("valve not available.")
     # if (Pump1.value() == 0) and (Pump2.value() == 0):
     #    print("Both Pumps are available")
 
+
+def record_sample():
+    now = datetime.datetime.now()
+    log = now.strftime("%Y-%m-%d %H:%M")
+    can.can_log.append(log)
 
 def check_pins():
     print(i2c, Pumpon, Pumpoff)
@@ -275,8 +299,6 @@ def close_valve_timed(pump,t):
 
 first_time = True
 
-
-global current_sender
 change = False  # This variable helpsKeep track of who the last sender was/is
 # while True:
 #    open_valve(Pumpon)
