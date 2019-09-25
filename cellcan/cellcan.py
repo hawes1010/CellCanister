@@ -31,7 +31,9 @@ import datetime
 # Value sets buttons to be digital inputs that can control
 class Canister:
     can_log = []
-
+    
+    sample_number = 0
+    
     def __init__(self, status):
         self.status = status
 
