@@ -276,7 +276,7 @@ void Spod::read_R(){
         Serial2.println(datapac); //data pack
         Serial2.flush(); //clear sonic port
 }
-void Spod::read_?(){
+void Spod::read_Q(){
 	 Serial2.println("SUPER SONIC MENU:");
     Serial2.println();
     Serial2.print("  ");

@@ -15,7 +15,7 @@ class Spod
 	void read_D();
 	void read_S();
 	void read_R();
-	void read_?();
+	void read_Q();
 };
 
 #endif

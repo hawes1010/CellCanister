@@ -1,3 +1,5 @@
+#include <Spod.h>
+
 /* ver 1
 -Uses Teensy Microcontroller
 
@@ -496,4 +498,3 @@ unsigned long processSyncMessage() {
     return pctime; 
   }
   
-
