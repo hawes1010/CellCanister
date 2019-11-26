@@ -5,19 +5,18 @@
 2. Text that number a "?" to get the list of commands.  Note: if this is the 
 first time the device is being texted, it will send the commands anyway as a courtesy
 3. Use one of the commands desired: most likely Pull Sample 1. 
-For reference:
-         ~~~~"Command": Response~~~~~
+For reference:  structure below is: "Command": Response.  The phrase on the left side of the colon is the command you send.
          "?": "Sending Commands",
         "Check Can".lower(): "Checking on Can",
         "Pull Sample 1".lower(): "Pulling Sample from pump 1",
-        "Pull Sample 2".lower(): "Pulling Sample from pump 2",
+      // There is a Pull Sample 2 command. this command is for future use.  Ineffective at the moment.
         "Reset".lower(): "Resetting Pump system",
-        "Time Sample".lower(): "How many seconds do you want the pump open?"
+        "Time Sample".lower(): "How many seconds do you want the pump open?"//Note this one is still relatively untested
 Command Functions:
    '?' gives you a list above of items on the left
-   'Pull Sample 1' pulls from the 1st pump (This was assuming 2 seperate pumps, easy removal)
-   'Pull Sample 2' pulls from the 2nd pump (This assumed 2 seperate pumps)
+   'Pull Sample 1' pulls from the 1st pump (This opens the solenoid for 30 seconds)
+   'Pull Sample 2' pulls from the 2nd pump (This assumed 2 seperate pumps)// note this is ineffective
    'Reset' resets software on cell can
-   'Time Sample' will wait for you to send how many seconds the pump stays open.
-   ~~~More functions can be added easily~~~         
-4. If you need to reset the device, there is soon to be a hardware switch, as well as a software reset command you can text to the device.
+   'Time Sample' will wait for you to send how many seconds the pump stays open. //needs more testing
+   ~~~More functions can be added or altered easily~~~         
+4. If you need to reset the device, there is a hardware switch, as well as a software reset command you can text to the device.
