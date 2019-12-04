@@ -66,7 +66,7 @@ c = network.Cellular()
 # i2c = I2C(1, freq=400000)  # I2c Module
 Pumpon = Pin("P0", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1 P0 is on DIO10
 Pumpoff = Pin("D2", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1 D2 is on DIO2
-commands_list = ["?", "Check Can", "Pull Sample 1", "Pull Sample 2", "Reset", "Time Sample"]
+commands_list = ["?", "Check Can", "Pull Sample 1", "Pull Sample 2", "Reset", "Time Sample X"]
 send_list = "Commands: " + str(commands_list).strip('[]')
 pump_ready = 1
 print("Starting up again!")
@@ -77,17 +77,19 @@ data = []
 Pump_time = 30
 # RELAY PIN = "Digital logic line here"
 
-
 def text_messages(string): # This looks at the received message and returns a message to send
     # back to the user.
-    string = string.lower()
+    time_msg = t_split(string)
+    if time_msg[0].lower() is "time" and time_msg[1].lower() is "sample":
+        return "Time Sample set"
+    string = string.lower().strip()
     switcher = {
         "?": "^Commands^",
-        "Check Can".lower(): "Checking on Can",
-        "Pull Sample 1".lower(): "Pulling Sample from pump 1",
-        "Pull Sample 2".lower(): "Pulling Sample from pump 2",
-        "Reset".lower(): "Resetting Pump system",
-        "Time Sample".lower(): "How many seconds do you want the pump open?"
+        "Check Can".lower().strip(): "Can Check Complete",
+        "Pull Sample 1".lower().strip(): "Done Pulling from solenoid 1",
+        "Pull Sample 2".lower().strip(): "Done Pulling from solenoid 2",
+        "Reset".lower().strip(): "Resetting Pump system",
+
     }
     print(switcher.get(string, "Invalid command message"))
     return switcher.get(string, "Invalid command message")
@@ -107,7 +109,10 @@ def shutdown():
 
 
 def command_list(comm):
+    global Pump_time
+    global data
     data = t_split(comm)
+    print(data)
     if comm.lower().strip() == "?":
         return 0
     elif comm.lower().strip() == "check can":
@@ -133,13 +138,19 @@ def command_list(comm):
 def sleep(time):
     time.sleep(time)
 
+
 def t_split(string):
+    global data
     # AAAA string parsign sux
     data = string.split (" ",2)
     return data
 
+
 def control_canister(intz): # this just reads in an integer that gets set based on the message received
+    global Pump_time
+    global data
     # These are still waiting for hardware lines to interface with
+    global pump_ready
     time_passed=0
     if intz == 0:
         strength = acknowledge()
@@ -167,23 +178,26 @@ def control_canister(intz): # this just reads in an integer that gets set based 
             print("Send failure: %s" % str(e))
     elif intz == 2:  # Check Can status 1 too, but then power Solenoid
         strength = acknowledge()
-        global pump_ready
-        pump_ready = 0
         send_back_number2 = sms['sender']
         print(Pumpon.value())
-        if Pumpon.value() == 0:
+        if Pumpon.value() == 0 and pump_ready is 1:
             open_valve()
+            pump_ready = 0
         else:
             try:
                 # c.sms_send(send_back_number2, strength)
                 # utime.sleep_ms(500)
-                c.sms_send(send_back_number2, "Pump Busy")
+                if Pumpon.value() == 1:
+                    c.sms_send(send_back_number2, "Pump Busy")
+                if pump_ready is 0:
+                    c.sms_send(send_back_number2, "Pump already Sampled")
+                if Pumpon.value() == 1 and pump_ready is 0:
+                    c.sms_send(send_back_number2, "Pump already Sampled and is Busy")
             except Exception as e:
                 print("Send failure: %s" % str(e))
             print("Valve busy")
     elif intz == 3:  # Check Can status 2 too, but then power Solenoid RIGHT NOW THIS DOES THE SAME AS 2
         strength = acknowledge()
-        global pump_ready
         pump_ready = 0
         send_back_number2 = sms['sender']
         if Pumpon.value == 0:
@@ -192,7 +206,6 @@ def control_canister(intz): # this just reads in an integer that gets set based 
             print("Valve busy")
     elif intz == 4:  # Do a System or Canister Reset
         strength = acknowledge()
-        global pump_ready
         send_back_number2 = sms['sender']
         pump_ready = 1
         try:
@@ -203,8 +216,6 @@ def control_canister(intz): # this just reads in an integer that gets set based 
             print("Send failure: %s" % str(e))
         print("At some point this will reset something")
     elif intz == 5: # Get new Time
-        strength = acknowledge()
-        global pump_ready
         pump_ready = 1
         send_back_number2 = sms['sender']
         # time_passed = 0
@@ -220,7 +231,7 @@ def control_canister(intz): # this just reads in an integer that gets set based 
         try:
             # c.sms_send(send_back_number2, strength)
             # utime.sleep_ms(500)
-            c.sms_send(send_back_number2, "Pump Time Changed to" + data[3])
+            c.sms_send(send_back_number2, "Pump Time Changed to " + data[2])
         except Exception as e:
             print("Send failure: %s" % str(e))
     else:
@@ -324,10 +335,12 @@ def close_valve_timed(pump, t):
 
 
 def change_time(t):
+    global Pump_time
     Pump_time = t
 
 
 def reset_time():
+    global Pump_time
     Pump_time = 30
 
 # def timestamp():
@@ -342,7 +355,7 @@ first_time = True
 
 def acknowledge():
    strength = xbee.atcmd('DB')
-   message_ak = "SS: " + strength + " dB"
+   message_ak = "SS: " + str(strength) + " dB"
    return message_ak
 
 
@@ -380,13 +393,12 @@ while True:
         time.sleep(1) # wait one second
     elif sms: # no change in sender or the first time it has been activated
         print("SMS received from %s >> %s" % (sms['sender'], sms['message']))
-        send_back_number = sms['sender'] # this sets up the sender as the receiver of the Xbee Message
+        send_back_number2 = sms['sender'] # this sets up the sender as the receiver of the Xbee Message
         message_send = text_messages(sms['message'])
         strength = acknowledge()
 
-
         try:
-            c.sms_send(send_back_number2, "acknowledge")
+            c.sms_send(send_back_number2, strength)
             print("Successful send")
         except Exception as e:
             print("Send failure: %s" % str(e))
@@ -395,7 +407,7 @@ while True:
 
         control_canister(command_list(sms['message']))
         try:
-            c.sms_send(send_back_number, message_send)
+            c.sms_send(send_back_number2, message_send)
             print("Successful send")
         except Exception as e:
             print("Send failure: %s" % str(e))
