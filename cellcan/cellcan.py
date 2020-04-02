@@ -12,8 +12,10 @@ import network
 import xbee
 import machine
 from machine import Pin
+from machine import UART
 import utime
 from machine import I2C
+import sys
 
 # EXAMPLE!!!!!!~~~~~`
 # Set up a Pin object to represent pin 6, which is P0 according to XCTU (PWM0/RSSI/DIO10).
@@ -42,17 +44,24 @@ class Canister:
 
 can = Canister(1)
 
-
 # These are the buttons to be used (SW2 through SW5)
 # DIO0-DIO3 are the buttons in the bottom right of the schematic assuming the USB is the bottom
 # ADC also occupies the same memory as D0-D3
 # Pin(Label of Pin we wish to use, Input or Output, Pull Up or Pull Down)
 # Value sets buttons to be digital inputs that can control
+uart = UART(1, 9600)  # init with given baudrate
+uart.init(9600, bits=8, parity=None, stop=1)  # init with given parameters
+
+# Read a line, ending in a newline character. It may return sooner if a timeout is reached.
+# The timeout is configurable in the constructor.
+
+analog0 = machine.ADC('D0')
+analog1 = machine.ADC('D3')
 
 dio0 = Pin("D0", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1
 # dio1 = Pin("D1", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1
 # dio2 = Pin("D2", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1
-reset_pin = Pin("D3", 2, Pin.PULL_UP)  # Digital Low~~~~~~~Digital High = 1
+reset_pin = Pin("D5", 2, Pin.PULL_UP)  # Digital Low~~~~~~~Digital High = 1
 led = Pin("D4", Pin.OUT, value=0)  # Turn on LED to signify startup
 # this network command sets up the object for the Cellular Network
 c = network.Cellular()
@@ -63,9 +72,10 @@ c = network.Cellular()
 # I2C LINES ARE D1: pin 19, and P1: pin 7
 
 
-# i2c = I2C(1, freq=400000)  # I2c Module
-Pumpon = Pin("P0", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1 P0 is on DIO10
-Pumpoff = Pin("D2", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1 D2 is on DIO2
+i2c = I2C(1, freq=400000)  # I2c Module
+
+Pumpon = Pin("D7", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1 P0 is on DIO10
+Pumpoff = Pin("D9", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1 D2 is on DIO2
 commands_list = ["?", "Check Can", "Pull Sample 1", "Pull Sample 2", "Reset", "Time Sample X"]
 send_list = "Commands: " + str(commands_list).strip('[]')
 pump_ready = 1
@@ -75,9 +85,12 @@ print("Starting up again!")
 # Pump_time is the variable which controls how long the pump is on for.
 data = []
 Pump_time = 30
+
+
 # RELAY PIN = "Digital logic line here"
 
-def text_messages(string): # This looks at the received message and returns a message to send
+
+def text_messages(string):  # This looks at the received message and returns a message to send
     # back to the user.
     time_msg = t_split(string)
     if time_msg[0].lower() is "time" and time_msg[1].lower() is "sample":
@@ -142,16 +155,16 @@ def sleep(time):
 def t_split(string):
     global data
     # AAAA string parsign sux
-    data = string.split (" ",2)
+    data = string.split(" ", 2)
     return data
 
 
-def control_canister(intz): # this just reads in an integer that gets set based on the message received
+def control_canister(intz):  # this just reads in an integer that gets set based on the message received
     global Pump_time
     global data
     # These are still waiting for hardware lines to interface with
     global pump_ready
-    time_passed=0
+    time_passed = 0
     if intz == 0:
         strength = acknowledge()
         print("Nothing happens, commands are sent")
@@ -215,7 +228,7 @@ def control_canister(intz): # this just reads in an integer that gets set based 
         except Exception as e:
             print("Send failure: %s" % str(e))
         print("At some point this will reset something")
-    elif intz == 5: # Get new Time
+    elif intz == 5:  # Get new Time
         pump_ready = 1
         send_back_number2 = sms['sender']
         # time_passed = 0
@@ -248,6 +261,25 @@ def wait_for_message():
     time.sleep(1)
 
 
+def read_adc0():
+    global analog0
+    val = analog0.read()
+    return val
+
+
+def read_adc1():
+    global analog1
+    val = analog1.read()
+    return val
+
+
+def i2c_request():
+    global i2c
+    data_i2c = i2c.readfrom(40, 4)
+    data_i2c = int.from_bytes(data_i2c, byteorder='big')
+    return data_i2c
+
+
 def read_status():
     if Pumpon.value() == 1:
         print("Pump1 Not available")
@@ -258,7 +290,7 @@ def read_status():
 
 
 def check_pins():
-    print( Pumpon, Pumpoff) # i2c,
+    print(Pumpon, Pumpoff)  # i2c,
 
 
 def open_valve():
@@ -343,6 +375,7 @@ def reset_time():
     global Pump_time
     Pump_time = 30
 
+
 # def timestamp():
 
 #   now = datetime.now()
@@ -354,9 +387,9 @@ first_time = True
 
 
 def acknowledge():
-   strength = xbee.atcmd('DB')
-   message_ak = "SS: " + str(strength) + " dB"
-   return message_ak
+    strength = xbee.atcmd('DB')
+    message_ak = "SS: " + str(strength) + " dB"
+    return message_ak
 
 
 global current_sender
@@ -375,25 +408,24 @@ while not c.isconnected():
         print(reset_pin.value())
     time.sleep(1)
 
-
 while True:
     if reset_pin.value() == 0:
-      #  led.value(1)
+        #  led.value(1)
         print(reset_pin.value())
-        #xbee.atcmd('FR')
+        # xbee.atcmd('FR')
         machine.soft_reset()
     sms = c.sms_receive()
-    if sms and first_time: # or change:  # if a new user is texting in to the device,
-        change = False                  # send them the commands
+    if sms and first_time:  # or change:  # if a new user is texting in to the device,
+        change = False  # send them the commands
         first_time = False
         current_sender = sms['sender']
         send_back_number = sms['sender']
-        c.sms_send(send_back_number, send_list) # Sender gets command list
+        c.sms_send(send_back_number, send_list)  # Sender gets command list
 
-        time.sleep(1) # wait one second
-    elif sms: # no change in sender or the first time it has been activated
+        time.sleep(1)  # wait one second
+    elif sms:  # no change in sender or the first time it has been activated
         print("SMS received from %s >> %s" % (sms['sender'], sms['message']))
-        send_back_number2 = sms['sender'] # this sets up the sender as the receiver of the Xbee Message
+        send_back_number2 = sms['sender']  # this sets up the sender as the receiver of the Xbee Message
         message_send = text_messages(sms['message'])
         strength = acknowledge()
 
@@ -404,7 +436,6 @@ while True:
             print("Send failure: %s" % str(e))
         time.sleep(1)
 
-
         control_canister(command_list(sms['message']))
         try:
             c.sms_send(send_back_number2, message_send)
@@ -413,4 +444,3 @@ while True:
             print("Send failure: %s" % str(e))
     # Wait 1000 ms before checking for data again.
     time.sleep(1)
-
