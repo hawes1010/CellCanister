@@ -275,9 +275,10 @@ def read_adc1():
 
 def i2c_request():
     global i2c
-    data_i2c = i2c.readfrom(40, 4)
-    data_i2c = int.from_bytes(data_i2c, byteorder='big')
-    return data_i2c
+    data_i2c = i2c.readfrom(40, 2)
+    data_i2c=  int.from_bytes(data_i2c, byteorder='big') # may be little
+    output = ((.80)/(30))*(data_i2c+15) + .1
+    return output
 
 
 def read_status():
@@ -285,7 +286,7 @@ def read_status():
         print("Pump1 Not available")
     # if Pump2.value == 1:
     #    print("Pump2 not available.")
-    # if (Pump1.value() == 0) and (Pump2.value() == 0):
+    # if (Pump1.value() == 0) dand (Pump2.value() == 0):
     #    print("Both Pumps are available")
 
 
@@ -427,10 +428,12 @@ while True:
         print("SMS received from %s >> %s" % (sms['sender'], sms['message']))
         send_back_number2 = sms['sender']  # this sets up the sender as the receiver of the Xbee Message
         message_send = text_messages(sms['message'])
+        new_msg = "" + i2c_request()
         strength = acknowledge()
+        new_msg = new_msg + " strength: " + strength
 
         try:
-            c.sms_send(send_back_number2, strength)
+            c.sms_send(send_back_number2, new_msg)
             print("Successful send")
         except Exception as e:
             print("Send failure: %s" % str(e))
