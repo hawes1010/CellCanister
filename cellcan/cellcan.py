@@ -27,7 +27,8 @@ import sys
 # This Canister class holds the static variables we need for sending back a log to the user, as well as how many
 # times the the can has been sampled total.
 # datetime = datetime.now()
-
+Pumpon = Pin("D7", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1 P0 is on DIO10
+Pumpoff = Pin("D9", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1 D2 is on DIO2
 class Canister:
     can_log = []
 
@@ -61,7 +62,7 @@ analog1 = machine.ADC('D3')
 dio0 = Pin("D0", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1
 # dio1 = Pin("D1", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1
 # dio2 = Pin("D2", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1
-reset_pin = Pin("D5", 2, Pin.PULL_UP)  # Digital Low~~~~~~~Digital High = 1
+reset_pin = Pin("D5", Pin.IN, Pin.PULL_UP)  # Digital Low~~~~~~~Digital High = 1
 led = Pin("D4", Pin.OUT, value=0)  # Turn on LED to signify startup
 # this network command sets up the object for the Cellular Network
 c = network.Cellular()
@@ -74,8 +75,7 @@ c = network.Cellular()
 
 i2c = I2C(1, freq=400000)  # I2c Module
 
-Pumpon = Pin("D7", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1 P0 is on DIO10
-Pumpoff = Pin("D9", Pin.OUT, value=0)  # Digital Low~~~~~~~Digital High = 1 D2 is on DIO2
+
 commands_list = ["?", "Check Can", "Pull Sample 1", "Pull Sample 2", "Reset", "Time Sample X"]
 send_list = "Commands: " + str(commands_list).strip('[]')
 pump_ready = 1
@@ -405,6 +405,7 @@ while not c.isconnected():
     # print("I am not connected")
     if reset_pin.value() == 0:
         xbee.atcmd('FR')
+        print(reset_pin.value())
         machine.soft_reset()
         print(reset_pin.value())
     time.sleep(1)
