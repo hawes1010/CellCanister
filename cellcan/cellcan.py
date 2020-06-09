@@ -305,18 +305,18 @@ def open_valve():
     # let valve stay open for 30 seconds, currently commented out for demo purposes
     time.sleep(Pump_time)
     # still on until... close valve! Make sure to use off switch line
-    close_valve(Pumpoff)
+    close_valve()
     # should be ded now
 
 
-def close_valve(pump):
+def close_valve():
     # Latching
-    pump.value(1)
+    Pumpoff.value(1)
     # time to close that valve
     # pulse the  power for 500 ms
     utime.sleep_ms(500)
     # stop pulsing
-    pump.value(0)
+    Pumpoff.value(0)
     time.sleep(1)
     # now its off, yay
 
@@ -401,6 +401,8 @@ change = False  # This variable helpsKeep track of who the last sender was/is
 #    xbee.atcmd('FR')
 #    machine.soft_reset()
 #    print(reset_pin.value())
+close_valve()
+print("Closing the pump just in case")
 while not c.isconnected():
     # print("I am not connected")
     if reset_pin.value() == 0:
