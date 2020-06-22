@@ -398,6 +398,7 @@ change = False  # This variable helpsKeep track of who the last sender was/is
 # while True:
 #    open_valve(Pumpon)
 # if reset_pin.value() == 0:
+
 #    xbee.atcmd('FR')
 #    machine.soft_reset()
 #    print(reset_pin.value())
