@@ -432,9 +432,9 @@ while True:
         print("SMS received from %s >> %s" % (sms['sender'], sms['message']))
         send_back_number2 = sms['sender']  # this sets up the sender as the receiver of the Xbee Message
         message_send = text_messages(sms['message'])
-        new_msg = "" + i2c_request()
+        #new_msg = "" + i2c_request()
         strength = acknowledge()
-        new_msg = new_msg + " strength: " + strength
+        new_msg = " strength: " + strength
 
         try:
             c.sms_send(send_back_number2, new_msg)
