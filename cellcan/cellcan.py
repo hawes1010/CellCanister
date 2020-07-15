@@ -76,7 +76,7 @@ c = network.Cellular()
 i2c = I2C(1, freq=400000)  # I2c Module
 
 
-commands_list = ["?", "Check Can", "Pull Sample 1", "Pull Sample 2", "Reset", "Time Sample X"]
+commands_list = ["?", "Check Can", "Pull Sample 1","Pull Sample 2", "Reset", "Time Sample X"]
 send_list = "Commands: " + str(commands_list).strip('[]')
 pump_ready = 1
 print("Starting up again!")
@@ -211,10 +211,10 @@ def control_canister(intz):  # this just reads in an integer that gets set based
             print("Valve busy")
     elif intz == 3:  # Check Can status 2 too, but then power Solenoid RIGHT NOW THIS DOES THE SAME AS 2
         strength = acknowledge()
-        pump_ready = 0
+        pump_ready = 1
         send_back_number2 = sms['sender']
         if Pumpon.value == 0:
-            open_valve(Pumpon)
+            open_valve()
         else:
             print("Valve busy")
     elif intz == 4:  # Do a System or Canister Reset
@@ -273,13 +273,13 @@ def read_adc1():
     return val
 
 
-def i2c_request():
+"""def i2c_request():
     global i2c
     data_i2c = i2c.readfrom(40, 2)
     data_i2c=  int.from_bytes(data_i2c, byteorder='big') # may be little
     output = ((.80)/(30))*(data_i2c+15) + .1
     return output
-
+"""
 
 def read_status():
     if Pumpon.value() == 1:
@@ -369,7 +369,7 @@ def close_valve_timed(pump, t):
 
 def change_time(t):
     global Pump_time
-    Pump_time = t
+    Pump_time = float(t)
 
 
 def reset_time():
@@ -377,12 +377,18 @@ def reset_time():
     Pump_time = 30
 
 
-# def timestamp():
-
-#   now = datetime.now()
-#    now = now.strftime("%Y-%m-%d %H:%M")
-#    can.can_log.append(now)
-#   can.sample_count = can.sample_count + 1
+def timestamp():
+    now = utime.localtime() # time.struct_time(tm_year=2020, tm_mon=7, tm_mday=13, tm_hour=17, tm_min=10, tm_sec=35, tm_wday=0, tm_yday=195, tm_isdst=0)
+    year = now[0]
+    month = now[1]
+    day = now[2]
+    hour = now[3]
+    min = now[4]
+    sec = now[5]
+    # can.can_log.append(now)
+    # can.sample_count = can.sample_count + 1
+    datetime = ""+str(year)+"-"+str(month)+"-"+str(day)+"  "+str(hour)+":"+str(min)+":"+str(sec)
+    return datetime
 
 first_time = True
 
@@ -406,11 +412,12 @@ close_valve()
 print("Closing the pump just in case")
 while not c.isconnected():
     # print("I am not connected")
-    if reset_pin.value() == 0:
+    """if reset_pin.value() == 0:
         xbee.atcmd('FR')
         print(reset_pin.value())
         machine.soft_reset()
         print(reset_pin.value())
+        """
     time.sleep(1)
 
 while True:
@@ -432,9 +439,9 @@ while True:
         print("SMS received from %s >> %s" % (sms['sender'], sms['message']))
         send_back_number2 = sms['sender']  # this sets up the sender as the receiver of the Xbee Message
         message_send = text_messages(sms['message'])
-        #new_msg = "" + i2c_request()
+        # new_msg = "" + i2c_request()
         strength = acknowledge()
-        new_msg = " strength: " + strength
+        new_msg = " strength: " + strength + ", Pressure: " + str(read_adc0()) + ". Timestamp: " + timestamp()
 
         try:
             c.sms_send(send_back_number2, new_msg)
