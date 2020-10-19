@@ -317,7 +317,7 @@ def close_valve():
     utime.sleep_ms(500)
     # stop pulsing
     Pumpoff.value(0)
-    time.sleep(1)
+    time.sleep(2)
     # now its off, yay
 
 
