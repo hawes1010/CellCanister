@@ -441,11 +441,8 @@ while True:
         message_send = text_messages(sms['message'])
         # new_msg = "" + i2c_request()
         strength = acknowledge()
-<<<<<<< HEAD
-        new_msg = "strength: " + strength
-=======
+
         new_msg = " strength: " + strength + ", Pressure: " + str(read_adc0()) + ". Timestamp: " + timestamp()
->>>>>>> 691afa38553e1d66f356be53167c360122502880
 
         try:
             c.sms_send(send_back_number2, new_msg)
